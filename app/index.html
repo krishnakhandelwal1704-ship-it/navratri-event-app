@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAVRATRI 2026 - Premium Event Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <!-- Auth View -->
+    <div id="auth-view" class="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-red-50 via-slate-100 to-amber-50">
+        <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+            <div class="text-center mb-8">
+                <span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full uppercase tracking-wider">✨ Dandiya Mahotsav 2026</span>
+                <h1 class="text-3xl font-extrabold text-red-900 tracking-wide mt-3">NAVRATRI 2026</h1>
+                <p class="text-xs text-slate-500 mt-1">Official Entry Pass & Identity Verification</p>
+            </div>
+            
+            <div id="error-box" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold border border-red-200"></div>
+
+            <form id="auth-form" onsubmit="handleAuth(event)" class="space-y-4">
+                <div id="name-group" class="hidden">
+                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Full Name</label>
+                    <input type="text" id="name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-900 focus:outline-none transition" placeholder="Krishna Sharma">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Email Address</label>
+                    <input type="email" id="email" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-900 focus:outline-none transition" placeholder="krishna@navratri.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Password</label>
+                    <input type="password" id="password" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-900 focus:outline-none transition" placeholder="••••••••">
+                </div>
+                <button type="submit" id="submit-btn" class="w-full py-3.5 bg-red-900 text-white font-extrabold rounded-xl hover:bg-red-800 transition shadow-lg shadow-red-900/20">Sign In</button>
+            </form>
+
+            <div class="text-center mt-6">
+                <button onclick="toggleAuthMode()" id="toggle-btn" type="button" class="text-xs text-red-900 font-bold hover:underline">Don't have an account? Sign Up</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application View -->
+    <div id="app-view" class="hidden min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-6">
+            <div>
+                <div class="mb-8">
+                    <h2 class="text-xl font-extrabold text-white tracking-wider">NAVRATRI 2026</h2>
+                    <span id="user-role-badge" class="inline-block mt-2 px-2.5 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/20">ROLE: CUSTOMER</span>
+                </div>
+
+                <nav class="space-y-2" id="sidebar-nav"></nav>
+            </div>
+
+            <div class="pt-6 border-t border-slate-800">
+                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Logged in as</p>
+                <p id="user-name-display" class="text-sm font-bold text-white truncate mb-4">Krishna Sharma</p>
+                <button onclick="logout()" type="button" class="w-full py-2.5 bg-red-500/10 text-red-400 rounded-xl text-xs font-bold hover:bg-red-500/20 transition border border-red-500/20">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-8 overflow-y-auto bg-slate-100">
+            <div id="content-area" class="max-w-5xl mx-auto"></div>
+        </main>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="booking-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div class="bg-white border border-slate-200 w-full max-w-xl p-6 rounded-3xl shadow-2xl">
+            <h2 id="modal-pass-title" class="text-xl font-bold text-slate-900 mb-1">Book Event Passes</h2>
+            <p class="text-xs text-slate-500 mb-4">Enter identity details for each attendee (Up to 6 passes per booking).</p>
+            
+            <div id="attendees-container" class="space-y-3 max-h-80 overflow-y-auto pr-1 mb-6"></div>
+
+            <div class="flex gap-3">
+                <button onclick="addAttendeeRow()" type="button" class="flex-1 py-3 bg-slate-200 text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-300 transition">+ Add Attendee</button>
+                <button onclick="submitBooking()" type="button" class="flex-1 py-3 bg-red-900 text-white rounded-xl text-xs font-extrabold hover:bg-red-800 transition shadow-lg shadow-red-900/10">Confirm & Pay</button>
+                <button onclick="closeModal()" type="button" class="py-3 px-4 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000/api/v1";
+        let isLoginMode = true;
+        let selectedPassId = null;
+
+        axios.interceptors.response.use(
+            response => response,
+            error => {
+                if (error.response && error.response.status === 401) {
+                    localStorage.clear();
+                    document.getElementById('app-view').classList.add('hidden');
+                    document.getElementById('auth-view').classList.remove('hidden');
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('name-group').classList.toggle('hidden', isLoginMode);
+            document.getElementById('submit-btn').innerText = isLoginMode ? "Sign In" : "Create Account";
+            document.getElementById('toggle-btn').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Sign In";
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+            const errorBox = document.getElementById('error-box');
+            errorBox.classList.add('hidden');
+
+            try {
+                let res;
+                if (isLoginMode) {
+                    res = await axios.post(`${API}/auth/login`, { email, password });
+                } else {
+                    res = await axios.post(`${API}/auth/register`, { name, email, phone: "9876543210", gender: "Male", password });
+                }
+                localStorage.setItem('token', res.data.access_token);
+                localStorage.setItem('role', res.data.role);
+                localStorage.setItem('userName', res.data.user_name || name);
+                localStorage.setItem('userEmail', email);
+                initApp();
+            } catch (err) {
+                errorBox.innerText = err.response?.data?.detail || "Authentication failed. Please check details.";
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function initApp() {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            const name = localStorage.getItem('userName');
+
+            if (!token) {
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('app-view').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
+            document.getElementById('user-role-badge').innerText = `ROLE: ${role}`;
+            document.getElementById('user-name-display').innerText = name || 'User';
+
+            setupNavigation(role);
+        }
+
+        function setupNavigation(role) {
+            const nav = document.getElementById('sidebar-nav');
+            if (role === 'ADMIN') {
+                nav.innerHTML = `
+                    <button onclick="switchTab('admin-stats')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">📊 Dashboard Stats</button>
+                    <button onclick="switchTab('admin-bookings')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">📑 All Bookings</button>
+                    <button onclick="switchTab('admin-passes')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">🎟️ Manage Passes</button>
+                    <button onclick="switchTab('admin-scanner')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">⚡ Gate Scanner</button>
+                `;
+                switchTab('admin-stats');
+            } else {
+                nav.innerHTML = `
+                    <button onclick="switchTab('profile')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">👤 My Profile</button>
+                    <button onclick="switchTab('book-passes')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">🎟️ Book Passes</button>
+                    <button onclick="switchTab('my-tickets')" type="button" class="w-full text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800 transition">🪪 My Tickets</button>
+                `;
+                switchTab('book-passes');
+            }
+        }
+
+        async function switchTab(tab) {
+            const token = localStorage.getItem('token');
+            const headers = { Authorization: `Bearer ${token}` };
+            const container = document.getElementById('content-area');
+
+            try {
+                if (tab === 'profile') {
+                    const name = localStorage.getItem('userName');
+                    const email = localStorage.getItem('userEmail');
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">User Profile & Identity</h1>
+                        <div class="bg-white border border-slate-200 p-6 rounded-2xl max-w-lg space-y-4 shadow-sm">
+                            <div><p class="text-[10px] text-slate-400 font-bold uppercase">FULL NAME</p><p class="text-lg font-bold text-slate-800 mt-1">${name}</p></div>
+                            <div><p class="text-[10px] text-slate-400 font-bold uppercase">EMAIL ADDRESS</p><p class="text-lg font-bold text-slate-800 mt-1">${email}</p></div>
+                            <div><p class="text-[10px] text-slate-400 font-bold uppercase">ACCOUNT STATUS</p><span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full mt-1 border border-emerald-200">VERIFIED CUSTOMER</span></div>
+                        </div>
+                    `;
+                } else if (tab === 'admin-stats') {
+                    const res = await axios.get(`${API}/admin/dashboard/stats`, { headers });
+                    const stats = res.data || {};
+                    const g = stats.gender_stats || { male: 0, female: 0, other: 0 };
+                    const total = stats.total_tickets_sold || 0;
+                    
+                    const malePct = total > 0 ? ((g.male / total) * 100).toFixed(1) : 0;
+                    const femalePct = total > 0 ? ((g.female / total) * 100).toFixed(1) : 0;
+                    const maleDeg = total > 0 ? (g.male / total) * 360 : 0;
+
+                    container.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h1 class="text-2xl font-extrabold text-slate-900">Dashboard Overview</h1>
+                                <p class="text-xs text-slate-500 mt-1">Live operational stats and gender analytics for Navratri 2026.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-4 mb-8">
+                            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Bookings</p>
+                                <p class="text-3xl font-black text-slate-800 mt-2">${stats.total_bookings || 0}</p>
+                            </div>
+                            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Passes Sold</p>
+                                <p class="text-3xl font-black text-slate-800 mt-2">${total}</p>
+                            </div>
+                            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Revenue</p>
+                                <p class="text-3xl font-black text-red-900 mt-2">₹${stats.total_revenue || 0}</p>
+                            </div>
+                            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gate Checked-In</p>
+                                <p class="text-3xl font-black text-emerald-600 mt-2">${stats.checked_in_count || 0}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-6">
+                            <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm col-span-1">
+                                <h3 class="text-base font-bold text-slate-900">Male vs Female Ratio</h3>
+                                <p class="text-xs text-slate-400 mt-0.5 mb-6">Attendee gender distribution breakdown</p>
+
+                                <div class="flex flex-col items-center justify-center my-4">
+                                    <div id="donut-chart-box" class="relative w-36 h-36 rounded-full flex items-center justify-center shadow-inner">
+                                        <div class="w-24 h-24 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
+                                            <span class="text-2xl font-black text-slate-800">${total}</span>
+                                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">TOTAL</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3 mt-6">
+                                    <div class="bg-blue-50/70 border border-blue-100 p-3 rounded-2xl text-center">
+                                        <p class="text-[10px] font-bold text-blue-600 uppercase">MALE</p>
+                                        <p class="text-xl font-black text-blue-900 mt-0.5">${g.male}</p>
+                                        <p class="text-[10px] font-semibold text-blue-500 mt-0.5">${malePct}%</p>
+                                    </div>
+                                    <div class="bg-pink-50/70 border border-pink-100 p-3 rounded-2xl text-center">
+                                        <p class="text-[10px] font-bold text-pink-600 uppercase">FEMALE</p>
+                                        <p class="text-xl font-black text-pink-900 mt-0.5">${g.female}</p>
+                                        <p class="text-[10px] font-semibold text-pink-500 mt-0.5">${femalePct}%</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm col-span-2 flex flex-col justify-between">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 mb-1">Event Entry Health & Security</h3>
+                                    <p class="text-xs text-slate-400 mb-6">Real-time status of verification and pass distribution.</p>
+                                    
+                                    <div class="space-y-4">
+                                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
+                                            <div>
+                                                <p class="text-xs font-bold text-slate-800">Identity Verified Attendees</p>
+                                                <p class="text-xs text-slate-500">Every attendee has name, gender, and phone linked.</p>
+                                            </div>
+                                            <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">100% VERIFIED</span>
+                                        </div>
+                                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex justify-between items-center">
+                                            <div>
+                                                <p class="text-xs font-bold text-slate-800">Gate Verification System</p>
+                                                <p class="text-xs text-slate-500">HMAC QR scanner prevents duplicate or fake entries.</p>
+                                            </div>
+                                            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full">ACTIVE</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-slate-100 flex justify-between text-xs text-slate-400">
+                                    <span>System Status: <strong class="text-emerald-600">Online</strong></span>
+                                    <span>Navratri 2026 Admin Suite</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('donut-chart-box').style.background = `conic-gradient(#3b82f6 0deg ${maleDeg}deg, #ec4899 ${maleDeg}deg 360deg)`;
+                } else if (tab === 'admin-bookings') {
+                    const res = await axios.get(`${API}/admin/bookings`, { headers });
+                    const bookings = res.data;
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">All Event Bookings</h1>
+                        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden p-4 shadow-sm">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase">
+                                        <th class="p-3">User</th>
+                                        <th class="p-3">Pass Title</th>
+                                        <th class="p-3">Amount</th>
+                                        <th class="p-3">Attendees</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-xs divide-y divide-slate-100">
+                                    ${bookings.map(b => `
+                                        <tr>
+                                            <td class="p-3 font-bold text-slate-800">${b.user_name}<br><span class="text-[10px] text-slate-400 font-normal">${b.user_email}</span></td>
+                                            <td class="p-3 text-slate-600">${b.pass_title}</td>
+                                            <td class="p-3 font-bold text-red-900">₹${b.total_amount}</td>
+                                            <td class="p-3">${b.attendees.map(a => `<div class="bg-slate-50 p-2 rounded-lg mb-1 border border-slate-200"><span class="font-bold text-slate-800">${a.name} (${a.gender})</span> • Phone: ${a.phone}<br><span class="text-[10px] text-slate-400 font-mono">Token: ${a.qr_token || 'N/A'}</span></div>`).join('')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else if (tab === 'admin-passes') {
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">Create New Event Pass</h1>
+                        <div class="bg-white border border-slate-200 p-6 rounded-2xl max-w-lg shadow-sm">
+                            <form onsubmit="createPass(event)" class="space-y-4">
+                                <div><label class="block text-xs font-bold text-slate-600 mb-1">PASS TITLE</label><input type="text" id="p-title" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800" placeholder="VIP Pass 2026"></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="block text-xs font-bold text-slate-600 mb-1">PRICE (₹)</label><input type="number" id="p-price" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800" placeholder="1500"></div>
+                                    <div><label class="block text-xs font-bold text-slate-600 mb-1">QUANTITY</label><input type="number" id="p-qty" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800" placeholder="200"></div>
+                                </div>
+                                <div><label class="block text-xs font-bold text-slate-600 mb-1">DATE</label><input type="text" id="p-date" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800" placeholder="18 Oct 2026"></div>
+                                <div><label class="block text-xs font-bold text-slate-600 mb-1">VENUE</label><input type="text" id="p-venue" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800" placeholder="Grand Ground, Mumbai"></div>
+                                <button type="submit" class="w-full py-3 bg-red-900 text-white font-extrabold rounded-xl hover:bg-red-800 transition">Publish Pass</button>
+                            </form>
+                        </div>
+                    `;
+                } else if (tab === 'book-passes') {
+                    const res = await axios.get(`${API}/passes`, { headers });
+                    const passes = res.data;
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">Navratri 2026 Pass Catalog</h1>
+                        <div class="grid grid-cols-2 gap-6">
+                            ${passes.map(p => `
+                                <div class="bg-white border border-slate-200 p-6 rounded-3xl flex flex-col justify-between shadow-sm hover:shadow-md transition">
+                                    <div>
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="text-lg font-bold text-slate-900">${p.title}</h3>
+                                            <span class="px-2.5 py-1 bg-red-50 text-red-800 text-[10px] font-bold rounded-full border border-red-100">${p.date}</span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-2 font-medium">${p.venue}</p>
+                                        <div class="mt-6 flex items-baseline gap-2">
+                                            <span class="text-3xl font-black text-red-900">₹${p.price}</span>
+                                            <span class="text-xs text-slate-400">/ ticket</span>
+                                        </div>
+                                        <p class="text-xs text-emerald-600 font-semibold mt-1">🔥 ${p.remaining_quantity} Passes Remaining</p>
+                                    </div>
+                                    <button onclick="openBookingModal('${p.id}', '${p.title}')" type="button" class="mt-6 w-full py-3 bg-red-900 text-white font-extrabold rounded-xl hover:bg-red-800 transition shadow-lg shadow-red-900/10">Book Pass Now</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else if (tab === 'my-tickets') {
+                    const res = await axios.get(`${API}/bookings/me`, { headers });
+                    const myBookings = res.data;
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">My Booked Tickets & Gate Passes</h1>
+                        <div class="space-y-6">
+                            ${myBookings.length === 0 ? `<p class="text-slate-500 text-sm">No tickets booked yet. Go to 'Book Passes' to reserve yours!</p>` : ''}
+                            ${myBookings.map(b => `
+                                <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="font-bold text-slate-900 text-base">${b.pass_title} <span class="text-xs text-slate-400 font-normal">(Booking ID: ${b.booking_id.slice(0,8)}...)</span></h3>
+                                        <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">${b.status}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mb-6">Booked on: ${b.created_at} • Total Paid: <span class="text-red-900 font-bold">₹${b.total_amount}</span></p>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        ${b.tickets.map((t, idx) => `
+                                            <div class="p-5 border border-slate-200 rounded-2xl bg-gradient-to-br from-slate-50 to-white flex flex-col justify-between shadow-xs">
+                                                <div>
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <span class="px-2 py-0.5 bg-red-100 text-red-800 text-[9px] font-bold rounded uppercase tracking-wider">Gate Entry Pass</span>
+                                                            <h4 class="font-extrabold text-sm text-slate-900 mt-1">${t.name}</h4>
+                                                        </div>
+                                                        <span class="text-xs font-bold text-slate-500">(${t.gender})</span>
+                                                    </div>
+                                                    <p class="text-xs text-slate-500">Phone: <span class="text-slate-800 font-bold">${t.phone}</span></p>
+                                                    <p class="text-xs text-slate-500 mt-0.5">Status: <span class="text-emerald-700 font-bold">${t.status}</span></p>
+                                                    
+                                                    <!-- Real Rendered QR Code -->
+                                                    <div class="my-4 p-4 bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center shadow-xs">
+                                                        <canvas id="qr-${b.booking_id.slice(0,4)}-${idx}" class="rounded-lg shadow-sm border border-slate-100"></canvas>
+                                                        <p class="text-[10px] text-slate-400 font-mono mt-2 select-all break-all bg-slate-50 px-2 py-1 rounded border border-slate-200 max-w-full truncate" title="HMAC Token">Token: ${t.qr_token}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex gap-2 mt-2">
+                                                    <button onclick="shareWhatsApp('${t.phone}', '${t.name}', '${b.pass_title}', '${t.qr_token}', '${b.booking_id}')" type="button" class="flex-1 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 transition flex items-center justify-center gap-1 shadow-xs">
+                                                        📲 WhatsApp
+                                                    </button>
+                                                    <button onclick="copyTicket('${t.name}', '${b.pass_title}', '${t.qr_token}')" type="button" class="px-4 py-2.5 bg-slate-800 text-slate-100 font-bold rounded-xl text-xs hover:bg-slate-900 transition">
+                                                        📋 Copy
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+
+                    // Generate Scannable QR Codes on Canvases
+                    setTimeout(() => {
+                        myBookings.forEach(b => {
+                            b.tickets.forEach((t, idx) => {
+                                const canvasId = `qr-${b.booking_id.slice(0,4)}-${idx}`;
+                                const canvasElem = document.getElementById(canvasId);
+                                if (canvasElem) {
+                                    new QRious({
+                                        element: canvasElem,
+                                        value: t.qr_token,
+                                        size: 130
+                                    });
+                                }
+                            });
+                        });
+                    }, 50);
+                } else if (tab === 'admin-scanner') {
+                    container.innerHTML = `
+                        <h1 class="text-2xl font-extrabold mb-6 text-slate-900">Entry Gate Scanner</h1>
+                        <div class="bg-white border border-slate-200 p-6 rounded-2xl max-w-lg shadow-sm">
+                            <form onsubmit="scanTicket(event)" class="space-y-4">
+                                <div><label class="block text-xs font-bold text-slate-600 mb-1">PASTE TICKET QR TOKEN</label><input type="text" id="qr-input" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-mono" placeholder="Paste HMAC Token here..."></div>
+                                <button type="submit" class="w-full py-3 bg-red-900 text-white font-extrabold rounded-xl hover:bg-red-800 transition">Verify Gate Entry</button>
+                            </form>
+                            <div id="scan-res" class="hidden mt-4 p-4 rounded-xl text-xs font-bold"></div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="p-6 bg-red-50 text-red-700 rounded-2xl font-bold">Error loading section: ${err.message}</div>`;
+            }
+        }
+
+        function shareWhatsApp(phone, attendeeName, passTitle, qrToken, bookingId) {
+            const message = `🎉 *NAVRATRI 2026 OFFICIAL TICKET* 🎉%0A%0A👤 *Attendee:* ${attendeeName}%0A🎟️ *Pass:* ${passTitle}%0A🆔 *Booking ID:* ${bookingId.slice(0,8)}...%0A🔑 *Entry QR Token:* ${qrToken}%0A%0APlease show this QR token at the entry gate!`;
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${message}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function copyTicket(attendeeName, passTitle, qrToken) {
+            const text = `🎉 NAVRATRI 2026 TICKET 🎉\nAttendee: ${attendeeName}\nPass: ${passTitle}\nQR Token: ${qrToken}`;
+            navigator.clipboard.writeText(text);
+            alert("Ticket info copied to clipboard!");
+        }
+
+        function openBookingModal(passId, passTitle) {
+            selectedPassId = passId;
+            document.getElementById('modal-pass-title').innerText = `Book: ${passTitle}`;
+            document.getElementById('attendees-container').innerHTML = '';
+            addAttendeeRow();
+            document.getElementById('booking-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('booking-modal').classList.add('hidden');
+        }
+
+        function addAttendeeRow() {
+            const container = document.getElementById('attendees-container');
+            if (container.children.length >= 6) {
+                alert("Maximum 6 tickets allowed per booking.");
+                return;
+            }
+            const idx = container.children.length + 1;
+            const div = document.createElement('div');
+            div.className = "p-3 border border-slate-200 rounded-xl bg-slate-50 space-y-2";
+            div.innerHTML = `
+                <p class="text-[10px] font-bold text-slate-500 uppercase">Attendee #${idx}</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" placeholder="Full Name" class="att-name px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800" required>
+                    <select class="att-gender px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <input type="text" placeholder="Phone Number" class="att-phone px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800" required>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function submitBooking() {
+            const nameInputs = document.querySelectorAll('.att-name');
+            const genderInputs = document.querySelectorAll('.att-gender');
+            const phoneInputs = document.querySelectorAll('.att-phone');
+
+            const attendees = [];
+            for (let i = 0; i < nameInputs.length; i++) {
+                if (!nameInputs[i].value || !phoneInputs[i].value) {
+                    alert("Please fill name & phone for all attendees.");
+                    return;
+                }
+                attendees.push({
+                    name: nameInputs[i].value,
+                    gender: genderInputs[i].value,
+                    phone: phoneInputs[i].value
+                });
+            }
+
+            const token = localStorage.getItem('token');
+            try {
+                await axios.post(`${API}/bookings`, {
+                    pass_id: selectedPassId,
+                    attendees: attendees
+                }, { headers: { Authorization: `Bearer ${token}` } });
+                
+                closeModal();
+                alert("Passes Booked Successfully!");
+                switchTab('my-tickets');
+            } catch (err) {
+                alert(err.response?.data?.detail || "Booking failed");
+            }
+        }
+
+        async function createPass(e) {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const title = document.getElementById('p-title').value;
+            const price = parseFloat(document.getElementById('p-price').value);
+            const total_quantity = parseInt(document.getElementById('p-qty').value);
+            const date = document.getElementById('p-date').value;
+            const venue = document.getElementById('p-venue').value;
+
+            try {
+                await axios.post(`${API}/passes`, { title, price, total_quantity, date, venue }, { headers: { Authorization: `Bearer ${token}` } });
+                alert("Pass Created!");
+                switchTab('admin-stats');
+            } catch (err) {
+                alert(err.response?.data?.detail || "Pass creation failed");
+            }
+        }
+
+        async function scanTicket(e) {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const qrToken = document.getElementById('qr-input').value;
+            const resBox = document.getElementById('scan-res');
+
+            try {
+                const res = await axios.post(`${API}/admin/tickets/scan`, { qr_token: qrToken }, { headers: { Authorization: `Bearer ${token}` } });
+                resBox.classList.remove('hidden', 'bg-red-100', 'bg-emerald-100', 'text-red-800', 'text-emerald-800');
+                if (res.data.status === 'VALID') {
+                    resBox.classList.add('bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-200');
+                    resBox.innerText = `ENTRY ALLOWED: ${res.data.attendee_name} (${res.data.attendee_gender})`;
+                } else {
+                    resBox.classList.add('bg-red-100', 'text-red-800', 'border', 'border-red-200');
+                    resBox.innerText = `${res.data.status}: ${res.data.message}`;
+                }
+            } catch (err) {
+                alert("Scan Failed");
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
